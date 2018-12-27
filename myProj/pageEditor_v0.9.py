@@ -15,6 +15,7 @@ try:
     from tkinter import ttk
     PhotoImage = tk.PhotoImage
     py3 = True
+    xrange = range
 
 except ImportError:
     # Python 2
@@ -23,7 +24,7 @@ except ImportError:
     import tkMessageBox as msg
     import ttk
     import tkFont as font
-    from PIL import Image, ImageTk 
+    from PIL import Image, ImageTk
     PhotoImage = ImageTk.PhotoImage
     py3 = False
 
@@ -115,7 +116,7 @@ class Toplevel1:
         self.TSizegrip1 = ttk.Sizegrip(top)
         self.TSizegrip1.place(anchor='se', relx=1.0, rely=1.0)
 
-        self.TPanedwindow1 = ttk.Panedwindow(top, orient="horizontal")
+        self.TPanedwindow1 = ttk.Panedwindow(self.top, orient="horizontal")
         self.TPanedwindow1.place(relx=0.0, rely=0.0, relheight=0.96
                 , relwidth=0.993)
         self.TPanedwindow1.configure(width=600)
@@ -123,9 +124,9 @@ class Toplevel1:
         self.TPanedwindow1.add(self.TPanedwindow1_p1)
         self.TPanedwindow1_p2 = ttk.Labelframe(width=90, text='FuntionPane')
         self.TPanedwindow1.add(self.TPanedwindow1_p2)
-        self.TPanedwindow1_p3 = ttk.Labelframe(width=400,text='EditorPane')
+        self.TPanedwindow1_p3 = ttk.Labelframe(width=800,text='EditorPane')
         self.TPanedwindow1.add(self.TPanedwindow1_p3)
-        self.TPanedwindow1_p4 = ttk.Labelframe(width=90,text='ResultFilePane')
+        self.TPanedwindow1_p4 = ttk.Labelframe(width=90, text='ResultFilePane')
         self.TPanedwindow1.add(self.TPanedwindow1_p4)
         self.__funcid0 = self.TPanedwindow1.bind('<Map>', self.__adjust_sash0)
 
@@ -136,8 +137,9 @@ class Toplevel1:
         self.input_file_list_box.configure(font="TkFixedFont")
         self.input_file_list_box.configure(highlightcolor="#d9d9d9")
         self.input_file_list_box.configure(selectbackground="#c4c4c4")
-        self.input_file_list_box.configure(width=10)
+        # self.input_file_list_box.configure(width=10)
         self.input_file_list_box.bind("<<ListboxSelect>>", self.file_open)
+        self.input_file_list_box.bind('<Button-3>', self.show_filepopup_menu)
 
         self.func_list_box = ScrolledListBox(self.TPanedwindow1_p2)
         self.func_list_box.place(relx=0.0, rely=0.0, relheight=1.0
@@ -148,18 +150,19 @@ class Toplevel1:
         self.func_list_box.configure(selectbackground="#c4c4c4")
         # self.func_list_box.configure(width=10)
         self.func_list_box.bind("<<ListboxSelect>>", self.func_open)
+        self.func_list_box.bind('<Button-3>', self.show_funcpopup_menu)
 
         self.main_text = ScrolledText(self.TPanedwindow1_p3)
         self.main_text.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0
                 , bordermode='ignore')
         self.main_text.configure(background="white")
         self.main_text.configure(font="TkTextFont")
-        self.main_text.configure(insertborderwidth="3")
+        self.main_text.configure(insertborderwidth="1")
         self.main_text.configure(selectbackground="#c4c4c4")
         # self.main_text.configure(width=20)
-        self.main_text.configure(wrap='word')
+        self.main_text.configure(wrap='none')
         self.main_text.configure(undo=True)
-        self.main_text.bind('<Button-3>', self.show_popup_menu)
+        self.main_text.bind('<Button-3>', self.show_textpopup_menu)
         self.main_text.focus_set()
 
         self.OutPaneScrollbox = ScrolledListBox(self.TPanedwindow1_p4)
@@ -170,6 +173,7 @@ class Toplevel1:
         self.OutPaneScrollbox.configure(highlightcolor="#d9d9d9")
         self.OutPaneScrollbox.configure(selectbackground="#c4c4c4")
         # self.OutPaneScrollbox.configure(width=10)
+        self.OutPaneScrollbox.bind('<Button-3>', self.show_outpopup_menu)
 
         # Infobar
         self.infobar = tk.Label(self.top)
@@ -183,14 +187,62 @@ class Toplevel1:
 
         #######################
         ### Pop up menu on left click
-        # set up the pop-up menu
-        self.popup_menu = tk.Menu(self.main_text, tearoff=0)
+        # set up the pop-up menu for text
+        self.text_popup_menu = tk.Menu(self.main_text, tearoff=0)
         for i in ('cut', 'copy', 'paste', 'undo', 'redo'):
             cmd = 'self.edit_' + i
             cmd = eval(cmd)
-            self.popup_menu.add_command(label=i, compound='right', command=cmd)
+            self.text_popup_menu.add_command(label=i, compound='right', command=cmd)
 
-        self.menubar = tk.Menu(top,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
+        #######################
+        ### Pop up menu on left click
+        # set up the pop-up menu for file bar
+        # self.func_popup_menu = tk.Menu(self.func_list_box, tearoff=0)
+        self.func_popup_menu_bar = tk.Menu(top,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
+        top.configure(menu=self.func_popup_menu_bar)
+
+        self.func_popup_submenu = tk.Menu(top, tearoff=0)
+        self.func_popup_menu_bar.add_cascade(menu=self.func_popup_submenu,
+                activebackground="#ececec",
+                activeforeground="#000000",
+                background="#d9d9d9",
+                compound="left",
+                font="TkMenuFont",
+                foreground="#000000",
+                label="Add Function to")
+        self.func_popup_submenu.add_command(
+                activebackground="#ececec",
+                activeforeground="#000000",
+                background="#d9d9d9",
+                compound="left",
+                font="TkMenuFont",
+                foreground="#000000",
+                label="New File",
+                command=self.file_save_as)
+        self.func_popup_submenu.add_command(
+                activebackground="#ececec",
+                activeforeground="#000000",
+                background="#d9d9d9",
+                compound="left",
+                font="TkMenuFont",
+                foreground="#000000",
+                label="File in list")
+
+        # self.func_popup_menu.add_command(label="Add Function to Proj",, compound='right')
+        # set up the pop-up menu for file bar
+        self.file_popup_menu = tk.Menu(self.input_file_list_box, tearoff=0)
+        self.file_popup_menu.add_command(label="Add File to Proj",
+                compound='right',
+                command=self.add_file_to_proj)
+        # self.file_popup_menu.add_command(label="Add Function to Proj",, compound='right')
+        # set up the pop-up menu for file bar
+        self.out_popup_menu = tk.Menu(self.OutPaneScrollbox, tearoff=0)
+        self.out_popup_menu.add_command(label="Remove from Proj",
+            compound='right',
+            command=self.remove_file_from_proj)
+        # self.func_popup_menu.add_command(label="Add Function to Proj",, compound='right')
+
+        self.menubar = tk.Menu(self.top,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
         self.top.configure(menu = self.menubar)
 
         self.sub_menu = tk.Menu(top,tearoff=0)
@@ -337,11 +389,15 @@ class Toplevel1:
 
     def file_open(self, event=None):
         if self.direct_access:
-            self.file_to_open = self.input_file_list_box.get(self.input_file_list_box.curselection())
-            self.file_to_open = self.file_list[self.file_to_open]
+            try:
+                self.file_to_open = self.input_file_list_box.get(self.input_file_list_box.curselection())
+                self.file_to_open = self.file_list[self.file_to_open]
+            except: #file name is empty
+                pass
+
         else:
             self.file_to_open = filedialog.askopenfilename()
-
+        self.input_file_list_box.focus_set()
         if self.file_to_open:
             self.open_file = self.file_to_open
             self.main_text.delete(1.0, tk.END)
@@ -353,6 +409,35 @@ class Toplevel1:
                         index = float(index) + 1.0
                         self.main_text.insert(index, line)
             self.func_name_extract(self.file_to_open)
+
+
+    def file_save_as(self,event=None):
+        try:
+        #Getting a filename to save the file.
+            f = filedialog.asksaveasfilename(initialfile='Untitled.txt',defaultextension=".txt",filetypes=[("All Files","*.*"),("Text Documents","*.txt")])
+            fh = open(f, 'w')           
+            global filename
+            filename = f
+            textoutput = selfmain_text.get(1.0, END)
+            fh.write(textoutput)              
+            fh.close()                
+        except:
+            self.infobar.configure(text= "File Not Saved")
+            pass 
+
+    def add_file_to_proj(self, event=None):
+        file_to_add = self.input_file_list_box.get(self.input_file_list_box.curselection())
+        self.OutPaneScrollbox.insert(0,file_to_add)
+        file_to_add = self.file_list[file_to_add]
+
+
+    def add_func_to_proj(self, event=None):
+        file_to_add = self.func_list_box.get(self.func_list_box.curselection())
+        print (file_to_add)
+
+    def remove_file_from_proj(self, event=None):
+        file_to_remove = self.OutPaneScrollbox.get(self.OutPaneScrollbox.curselection())
+        self.OutPaneScrollbox.delete('active')
 
     def edit_cut(self, event=None):
         self.main_text.event_generate("<<Cut>>")
@@ -411,9 +496,21 @@ class Toplevel1:
         pass
 
     ###################################
-    # PopUp menu
-    def show_popup_menu(self, event):
-        self.popup_menu.tk_popup(event.x_root, event.y_root)
+    # PopUp menu for text
+    def show_textpopup_menu(self, event):
+        self.text_popup_menu.tk_popup(event.x_root, event.y_root)
+
+    # PopUp menu for func
+    def show_funcpopup_menu(self, event):
+        self.func_popup_menu_bar.tk_popup(event.x_root, event.y_root)
+
+    # PopUp menu for file
+    def show_filepopup_menu(self, event):
+        self.file_popup_menu.tk_popup(event.x_root, event.y_root)
+
+    # PopUp menu for out
+    def show_outpopup_menu(self, event):
+        self.out_popup_menu.tk_popup(event.x_root, event.y_root)
 
     def pickle_dump(self,root_path, data, file_name):
         os.chdir(root_path)
@@ -491,7 +588,7 @@ class Toplevel1:
             line_split = line.split()
             index = 0
             for one in line_split:
-                if is_valid_name(one):
+                if self.is_valid_name(one):
                     index += 1
                     if index == 2:
                         return one
@@ -596,7 +693,8 @@ class Toplevel1:
                         i += 1
                     end_line = i
                    # if func_name != None:
-                    func_list.append([file_path, func_name, start_line + 1, end_line + 1, end_line - start_line + 1])
+                    func_list.append([file_path, func_name, start_line + 1,\
+                     end_line + 1, end_line - start_line + 1])
     #                print func_name
                     with open(".list", "w") as out_file:
                         csv_write = csv.writer(out_file)
