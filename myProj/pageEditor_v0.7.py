@@ -14,7 +14,7 @@ try:
     from tkinter import font
     from tkinter import ttk
     PhotoImage = tk.PhotoImage
-    py3 = False
+    py3 = True
 
 except ImportError:
     # Python 2
@@ -25,7 +25,7 @@ except ImportError:
     import tkFont as font
     from PIL import Image, ImageTk 
     PhotoImage = ImageTk.PhotoImage
-    py3 = True
+    py3 = False
 
 import re
 import os
